@@ -6,4 +6,5 @@ matplotlib
 seaborn
 joblib
 streamlit-lottie
-requests
+Pillow
+streamlit-extras
