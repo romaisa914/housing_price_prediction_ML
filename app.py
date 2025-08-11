@@ -1,44 +1,61 @@
 import streamlit as st
 import joblib
 import pandas as pd
-import numpy as np
+from streamlit_lottie import st_lottie
+import requests
+import time
 import os
 
-st.set_page_config(page_title="California Housing Price Predictor", page_icon="🏠", layout="centered")
+# --- Lottie Animation Loader ---
+def load_lottie_url(url):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
 
-st.markdown("""
-# 🏠 California Housing Price Predictor
-Adjust the inputs and click **Predict**.  
-Model is compact so it works well on Streamlit Cloud + GitHub.
-""")
+# --- Page Config ---
+st.set_page_config(
+    page_title="🏠 California Housing Price Predictor",
+    page_icon="🏠",
+    layout="centered"
+)
 
+# --- Load Animation ---
+house_anim = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_touohxv0.json")
+money_anim = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_jcikwtux.json")
+
+# --- Title ---
+st.markdown(
+    "<h1 style='text-align:center; color:#4CAF50;'>🏠 California Housing Price Predictor</h1>",
+    unsafe_allow_html=True
+)
+
+st_lottie(house_anim, height=200, key="house")
+
+# --- Load Model ---
 MODEL_PATH = "housing_model.pkl"
-
-@st.cache_data(show_spinner=False)
+@st.cache_data
 def load_model(path=MODEL_PATH):
     if not os.path.exists(path):
-        st.warning("Model file not found locally. Make sure 'housing_model.pkl' is in the app folder.")
+        st.error("Model file missing. Please upload 'housing_model.pkl'")
         return None
     return joblib.load(path)
 
 model = load_model()
 
-# Input controls in two columns
-col1, col2 = st.columns(2)
-with col1:
-    MedInc = st.slider("Median Income (10k USD)", min_value=0.5, max_value=15.0, value=3.0, step=0.1)
-    HouseAge = st.slider("House Age", 1, 50, 20)
-    AveRooms = st.slider("Average Rooms", 1.0, 10.0, 5.0)
-    AveBedrms = st.slider("Average Bedrooms", 0.5, 3.0, 1.0)
-with col2:
-    Population = st.slider("Population", 1, 5000, 1000)
-    AveOccup = st.slider("Average Occupancy", 0.5, 10.0, 3.0)
-    Latitude = st.slider("Latitude", 32.0, 42.0, 37.0)
-    Longitude = st.slider("Longitude", -125.0, -112.0, -122.0)
+# --- Sidebar Inputs ---
+st.sidebar.header("🔧 Input House Details")
+MedInc = st.sidebar.slider("Median Income (10k USD)", 0.5, 15.0, 3.0, 0.1)
+HouseAge = st.sidebar.slider("House Age", 1, 50, 20)
+AveRooms = st.sidebar.slider("Average Rooms", 1.0, 10.0, 5.0)
+AveBedrms = st.sidebar.slider("Average Bedrooms", 0.5, 3.0, 1.0)
+Population = st.sidebar.slider("Population", 1, 5000, 1000)
+AveOccup = st.sidebar.slider("Average Occupancy", 0.5, 10.0, 3.0)
+Latitude = st.sidebar.slider("Latitude", 32.0, 42.0, 37.0)
+Longitude = st.sidebar.slider("Longitude", -125.0, -112.0, -122.0)
 
-# engineered feature consistent with training notebook
+# --- Feature Engineering ---
 rooms_per_household = AveRooms / (AveOccup + 1e-6)
-
 input_df = pd.DataFrame([{
     'MedInc': MedInc,
     'HouseAge': HouseAge,
@@ -51,11 +68,16 @@ input_df = pd.DataFrame([{
     'rooms_per_household': rooms_per_household
 }])
 
-if st.button("Predict"):
+# --- Predict Button ---
+if st.button("🚀 Predict Price"):
     if model is None:
-        st.error("Model not loaded. Upload 'housing_model.pkl' to the app folder in your repo.")
+        st.error("❌ Model not loaded")
     else:
-        with st.spinner("Predicting..."):
+        with st.spinner("🔮 Analyzing market trends..."):
+            time.sleep(1.5)
             pred = model.predict(input_df)[0]
-            st.success(f"🏡 Predicted Median House Value: **${pred*100000:,.2f}**")
-            st.balloons()
+
+        st.success("✅ Prediction Complete!")
+        st.metric("🏡 Predicted Median House Value", f"${pred*100000:,.2f}")
+
+        st_lottie(money_anim, height=150, key="money")
