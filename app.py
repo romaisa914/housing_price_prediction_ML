@@ -18,7 +18,7 @@ lottie_house = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_rzv
 lottie_loading = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_j1adxtyb.json")
 
 # Load model
-model = joblib.load("model.pkl")
+model = joblib.load("housing_model.pkl")
 
 # Page config
 st.set_page_config(page_title="🏡 House Price Predictor", page_icon="🏠", layout="centered")
