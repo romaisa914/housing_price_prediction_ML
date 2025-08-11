@@ -1,83 +1,73 @@
 import streamlit as st
-import joblib
 import pandas as pd
+import numpy as np
+import joblib
 from streamlit_lottie import st_lottie
 import requests
-import time
-import os
 
-# --- Lottie Animation Loader ---
-def load_lottie_url(url):
+# Load Lottie animation from URL
+def load_lottieurl(url):
     r = requests.get(url)
     if r.status_code != 200:
         return None
     return r.json()
 
-# --- Page Config ---
-st.set_page_config(
-    page_title="🏠 California Housing Price Predictor",
-    page_icon="🏠",
-    layout="centered"
-)
+# Load animations
+lottie_welcome = load_lottieurl("https://assets3.lottiefiles.com/packages/lf20_3rwasyjy.json")
+lottie_house = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_rzvt4rvy.json")
+lottie_loading = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_j1adxtyb.json")
 
-# --- Load Animation ---
-house_anim = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_touohxv0.json")
-money_anim = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_jcikwtux.json")
+# Load model
+model = joblib.load("model.pkl")
 
-# --- Title ---
-st.markdown(
-    "<h1 style='text-align:center; color:#4CAF50;'>🏠 California Housing Price Predictor</h1>",
-    unsafe_allow_html=True
-)
+# Page config
+st.set_page_config(page_title="🏡 House Price Predictor", page_icon="🏠", layout="centered")
 
-st_lottie(house_anim, height=200, key="house")
+# Custom CSS for background and styling
+st.markdown("""
+    <style>
+    body {
+        background: linear-gradient(120deg, #f6d365, #fda085);
+    }
+    .stApp {
+        background: transparent;
+    }
+    .css-18e3th9 {
+        padding-top: 2rem;
+    }
+    .card {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- Load Model ---
-MODEL_PATH = "housing_model.pkl"
-@st.cache_data
-def load_model(path=MODEL_PATH):
-    if not os.path.exists(path):
-        st.error("Model file missing. Please upload 'housing_model.pkl'")
-        return None
-    return joblib.load(path)
+# Title
+st_lottie(lottie_welcome, height=200, key="welcome")
+st.title("🏠 House Price Prediction")
+st.write("Welcome! Let's estimate your dream home's price with a friendly touch. 🏡✨")
 
-model = load_model()
+# Input form in a nice card
+with st.container():
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.header("📋 Enter House Details")
+    col1, col2 = st.columns(2)
+    with col1:
+        area = st.number_input("📐 Area (sq ft)", min_value=500, max_value=10000, value=2000)
+        bedrooms = st.number_input("🛏 Bedrooms", min_value=1, max_value=10, value=3)
+    with col2:
+        bathrooms = st.number_input("🚿 Bathrooms", min_value=1, max_value=10, value=2)
+        stories = st.number_input("🏢 Stories", min_value=1, max_value=5, value=1)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Sidebar Inputs ---
-st.sidebar.header("🔧 Input House Details")
-MedInc = st.sidebar.slider("Median Income (10k USD)", 0.5, 15.0, 3.0, 0.1)
-HouseAge = st.sidebar.slider("House Age", 1, 50, 20)
-AveRooms = st.sidebar.slider("Average Rooms", 1.0, 10.0, 5.0)
-AveBedrms = st.sidebar.slider("Average Bedrooms", 0.5, 3.0, 1.0)
-Population = st.sidebar.slider("Population", 1, 5000, 1000)
-AveOccup = st.sidebar.slider("Average Occupancy", 0.5, 10.0, 3.0)
-Latitude = st.sidebar.slider("Latitude", 32.0, 42.0, 37.0)
-Longitude = st.sidebar.slider("Longitude", -125.0, -112.0, -122.0)
+# Prediction button
+if st.button("🔮 Predict Price"):
+    with st.spinner("Calculating the magic price... ✨"):
+        st_lottie(lottie_loading, height=150, key="loading")
+        features = np.array([[area, bedrooms, bathrooms, stories]])
+        prediction = model.predict(features)
+    st.success(f"💰 Estimated Price: **${prediction[0]:,.2f}**")
+    st_lottie(lottie_house, height=200, key="house")
 
-# --- Feature Engineering ---
-rooms_per_household = AveRooms / (AveOccup + 1e-6)
-input_df = pd.DataFrame([{
-    'MedInc': MedInc,
-    'HouseAge': HouseAge,
-    'AveRooms': AveRooms,
-    'AveBedrms': AveBedrms,
-    'Population': Population,
-    'AveOccup': AveOccup,
-    'Latitude': Latitude,
-    'Longitude': Longitude,
-    'rooms_per_household': rooms_per_household
-}])
-
-# --- Predict Button ---
-if st.button("🚀 Predict Price"):
-    if model is None:
-        st.error("❌ Model not loaded")
-    else:
-        with st.spinner("🔮 Analyzing market trends..."):
-            time.sleep(1.5)
-            pred = model.predict(input_df)[0]
-
-        st.success("✅ Prediction Complete!")
-        st.metric("🏡 Predicted Median House Value", f"${pred*100000:,.2f}")
-
-        st_lottie(money_anim, height=150, key="money")
